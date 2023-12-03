@@ -1,0 +1,134 @@
+import numpy as np
+from PIL import Image, ImageEnhance
+import matplotlib.pyplot as plt
+import numpy as np
+import argparse
+import cv2
+from matplotlib.colors import LogNorm
+
+# Görüntüyü yükle
+image_path = "optomodeneme.jpeg"
+iamg=cv2.imread(image_path)
+image = cv2.imread(image_path,0)
+original_image = image[145:850,300:995]
+original_image2 = iamg[145:850,300:995]
+
+
+
+def increase_contrast_pillow(image_path, factor=4.0):
+    # PIL/Pillow kullanarak kontrastı artır
+    pil_image = Image.open(image_path)
+    cropped_image = pil_image.crop((300, 145, 995, 850))
+    enhancer = ImageEnhance.Contrast(cropped_image)
+    pil_image_contrasted = enhancer.enhance(factor)
+
+    # PIL/Pillow görüntüsünü NumPy dizisine dönüştür
+    image_np = np.array(pil_image_contrasted)
+
+    return image_np
+
+def change_contrast_opencv(image, alpha=1.0, beta=0):
+    # OpenCV kullanarak kontrastı artır
+    result = cv2.convertScaleAbs(image, alpha=alpha, beta=beta)
+    return result
+
+
+
+# Pillow ile kontrastı artır
+pil_image_contrasted = increase_contrast_pillow(image_path, factor=4.5)
+
+
+# OpenCV ile kontrastı artır
+cv_image_contrasted = change_contrast_opencv(pil_image_contrasted, alpha=0.8, beta=0)
+
+# gamma
+
+def adjust_gamma(image, gamma):
+
+	invGamma = 1.0 / gamma
+	table = np.array([((i / 255.0) ** invGamma) * 255
+		for i in np.arange(0, 256)]).astype("uint8")
+
+	return cv2.LUT(image, table)
+
+
+gama_id=1.0
+adjusted = adjust_gamma(cv2.cvtColor(cv_image_contrasted, cv2.COLOR_BGR2GRAY), gamma=gama_id)
+
+cv2.putText(adjusted, "g={}".format(gama_id), (10, 30),
+cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 0, 255), 3)
+#gray_image = cv2.cvtColor(adjusted, cv2.COLOR_BGR2GRAY)
+#rgb2hsv =cv2.cvtColor(adjusted, cv2.COLOR_RGB2HSV)
+
+#plt.imshow(cv_image_contrasted)
+#plt.imshow(adjusted)
+#plt.show()
+
+#image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
+
+
+
+gray_image = cv2.cvtColor(cv_image_contrasted, cv2.COLOR_BGR2GRAY)
+normalized_images = cv2.normalize(gray_image, None, 0, 255, cv2.NORM_MINMAX)
+# Isıl harita oluştur
+
+custom_colormap = cv2.COLORMAP_HOT
+# Seviyeli görüntü haritası örneği 1
+colormap_1 = cv2.applyColorMap(normalized_images, cv2.COLORMAP_RAINBOW)
+# Seviyeli görüntü haritası örneği 2
+colormap_2 = cv2.applyColorMap(normalized_images, cv2.COLORMAP_JET)
+# Seviyeli görüntü haritası örneği 3
+colormap_3 = cv2.applyColorMap(normalized_images, cv2.COLORMAP_OCEAN)
+# Seviyeli görüntü haritası örneği 4
+colormap_4 = cv2.applyColorMap(normalized_images, cv2.COLORMAP_AUTUMN)
+# Seviyeli görüntü haritası örneği 5
+colormap_5 = cv2.applyColorMap(normalized_images, custom_colormap)
+
+grayy = cv2.cvtColor(cv_image_contrasted, cv2.COLOR_BGR2GRAY)
+
+# Kenar tespiti (isteğe bağlı, ancak konturları belirginleştirebilir)
+edges = cv2.Canny(grayy, 50, 150)
+
+# Konturları bul
+contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+# Konturları orijinal görüntü üzerine çiz
+contour_map = cv_image_contrasted.copy()
+cv2.drawContours(contour_map, contours, -1, (0, 255, 255), 2)
+
+# Görüntüleri göster
+plt.figure(figsize=(12, 6))
+
+plt.subplot(131), plt.imshow(cv2.cvtColor(cv_image_contrasted, cv2.COLOR_BGR2RGB)), plt.title('Orijinal Görüntü')
+plt.subplot(132), plt.imshow(grayy, cmap='gray'), plt.title('Gri Tonlu Görüntü')
+plt.subplot(133), plt.imshow(cv2.cvtColor(contour_map, cv2.COLOR_BGR2RGB)), plt.title('contrast Kontur Haritası')
+
+plt.show()
+
+
+
+
+
+plt.subplot(331),plt.imshow(cv_image_contrasted, extent=[0, 695, 0, 705]),plt.title('contrast')
+plt.xticks([]),plt.yticks([])
+plt.subplot(332),plt.imshow(adjusted, extent=[0, 695, 0, 705]),plt.title('gamma')
+plt.xticks([]),plt.yticks([])
+plt.subplot(333),plt.imshow(colormap_1, extent=[0, 695, 0, 705]),plt.title('1 map')
+plt.xticks([]),plt.yticks([])
+plt.subplot(334),plt.imshow(colormap_2, extent=[0, 695, 0, 705]),plt.title('2 map')
+plt.xticks([]),plt.yticks([])
+plt.subplot(335),plt.imshow(colormap_3, extent=[0, 695, 0, 705]),plt.title('3 map')
+plt.xticks([]),plt.yticks([])
+plt.subplot(336),plt.imshow(colormap_4, extent=[0, 695, 0, 705]),plt.title('4 map')
+plt.xticks([]),plt.yticks([])
+plt.subplot(337),plt.imshow(colormap_5, extent=[0, 695, 0, 705]),plt.title('5 map')
+plt.xticks([]),plt.yticks([])
+plt.subplot(338),plt.imshow(original_image2, extent=[0, 695, 0, 705]),plt.title('orijinal')
+plt.xticks([]),plt.yticks([])
+plt.show()
+cv2.waitKey(0)
+
+
+
+
+
